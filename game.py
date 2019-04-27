@@ -50,7 +50,7 @@ class snake:
         self.input_buffer = deque(["p", "p"]) 
 
         self.direction = ""
-        self.body = deque([self.init_pos])
+        self.body = [self.init_pos]
         self.length = len(self.body)
         self.lead_pos = self.init_pos
 
@@ -92,19 +92,22 @@ class snake:
 
     def feed(self, fd):
         self.move('p') #check its position before moving
-        if fd.pos == self.lead_pos:
-            self.body.appendleft(self.lead_pos)
+        if fd.pos[0] == self.lead_pos[0] and fd.pos[1] == self.lead_pos[1]:
+            self.body.insert(0, self.lead_pos)
             self.length += 1
             fd.status = False
             print("Stage {}".format(Game_stage))
             
     def check_status(self):
-        if self.body[0] in self.body[1:]:
-            self.status = False
-            return self.status
-        elif self.body[0][0] >= scn_size[0] or self.body[0][0] < 0 or self.body[0][1] >= scn_size[1] or self.body[0][1] < 0:
+        for body_seg in self.body[1:]:
+            if self.body[0][0] == body_seg[0] and self.body[0][1] == body_seg[1]:
+                self.status = False
+                return self.status
+            
+        if self.body[0][0] >= scn_size[0] or self.body[0][0] < 0 or self.body[0][1] >= scn_size[1] or self.body[0][1] < 0:
             self.status = False 
             return self.status
+
         else:
             return True
 
@@ -162,28 +165,32 @@ def main():
     while Game_Status is True:
 
         #render scn background
-        scn.fill((50, 50, 50))
-        for x in range(0, scn_size[0], scn_scale):
-            pygame.draw.line(scn, (150, 150, 150), (x, 0), (x, scn_size[1]))
-        for y in range(0, scn_size[1], scn_scale):
-            pygame.draw.line(scn, (150, 150, 150), (0, y), (scn_size[0], y)) 
+        try:
+            scn.fill((50, 50, 50))
+            for x in range(0, scn_size[0], scn_scale):
+                pygame.draw.line(scn, (150, 150, 150), (x, 0), (x, scn_size[1]))
+            for y in range(0, scn_size[1], scn_scale):
+                pygame.draw.line(scn, (150, 150, 150), (0, y), (scn_size[0], y)) 
 
-        #game process
-        if AI_MODE:
-            snk_AI.rectify()
-            snk_AI.log_inputs(snk_1, apple)
-            snk_AI.check_valid_ouputs(snk_1.body[0])
-            snk_AI.brew()
-            snk_1.input_buffer.append(snk_AI.vomit_output())
-        
-        snk_1.feed(apple)
-        snk_1.move()
-        apple.regenerate(position_set)
-        obj_update(scn, snk_1, apple)
-        pygame.display.update()
-        Game_Status = snk_1.check_status()
+            #game process
+            if AI_MODE:
+                snk_AI.rectify()
+                snk_AI.log_inputs(snk_1, apple)
+                snk_AI.check_valid_ouputs(snk_1.body[0])
+                snk_AI.brew()
+                snk_1.input_buffer.append(snk_AI.vomit_output())
+            
+            snk_1.feed(apple)
+            snk_1.move()
+            apple.regenerate(position_set)
+            obj_update(scn, snk_1, apple)
+            pygame.display.update()
+            Game_Status = snk_1.check_status()
 
-        clk.tick(Game_stage + 18)
+            clk.tick(Game_stage + 18)
+
+        except Exception as e:
+            pygame.quit()
 
     pygame.quit()
 

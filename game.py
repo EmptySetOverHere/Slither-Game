@@ -1,13 +1,17 @@
+__author__ = "SiSheng"
+
 import os
 import pygame
 import random
 import json
 import threading
 import numpy as np
+import pickle
+from AI import *
 from collections import deque
 from  pygame.locals import *
 
-AI_MODE = False
+AI_MODE = True
 Game_stage = 1
 Game_Status = True
 
@@ -16,9 +20,19 @@ try:
         settings = json.loads(f.read())
         scn_size = settings['scn_size']
         scn_scale = settings['scn_scale']
+    
+    with open("AIParameters.pickle", "rb") as p:
+        hidden_layers = pickle.load(p)
+        output_layer = pickle.load(p)
+        print(hidden_layers)
+        print(output_layer)
+    
+    with open("AIParameters.pickle", "wb") as p:
+        p.truncate(0)
+
 
 except Exception as e:
-    print(e)
+    raise(e)
     exit(0)
 
 
@@ -152,46 +166,41 @@ def main():
     clk = pygame.time.Clock()
 
     if AI_MODE:
-        try:
-            import AI
-            snk_AI = AI.slitherAI()
-        except Exception as e:
-            print(e)
-            exit(0)
+        snk_AI = slitherAI(hidden_layers=hidden_layers, output_layer=output_layer)
     else:
         listen_event = threading.Thread(target=event_handler, args=(snk_1,))
         listen_event.start()
 
+
     while Game_Status is True:
 
         #render scn background
-        try:
-            scn.fill((50, 50, 50))
-            for x in range(0, scn_size[0], scn_scale):
-                pygame.draw.line(scn, (150, 150, 150), (x, 0), (x, scn_size[1]))
-            for y in range(0, scn_size[1], scn_scale):
-                pygame.draw.line(scn, (150, 150, 150), (0, y), (scn_size[0], y)) 
+        scn.fill((50, 50, 50))
+        for x in range(0, scn_size[0], scn_scale):
+            pygame.draw.line(scn, (150, 150, 150), (x, 0), (x, scn_size[1]))
+        for y in range(0, scn_size[1], scn_scale):
+            pygame.draw.line(scn, (150, 150, 150), (0, y), (scn_size[0], y)) 
 
-            #game process
-            if AI_MODE:
-                snk_AI.rectify()
-                snk_AI.log_inputs(snk_1, apple)
-                snk_AI.check_valid_ouputs(snk_1.body[0])
-                snk_AI.brew()
-                snk_1.input_buffer.append(snk_AI.vomit_output())
-            
-            snk_1.feed(apple)
-            snk_1.move()
-            apple.regenerate(position_set)
-            obj_update(scn, snk_1, apple)
-            pygame.display.update()
-            Game_Status = snk_1.check_status()
+        #game process
+        if AI_MODE:
+            snk_AI.log_inputs(snk_1.body, [apple.pos])
+            snk_AI.brew()
+            snk_1.input_buffer.append(snk_AI.vomit_output())
+        
+        snk_1.feed(apple)
+        snk_1.move()
+        apple.regenerate(position_set)
+        obj_update(scn, snk_1, apple)
+        pygame.display.update()
+        Game_Status = snk_1.check_status()
 
-            clk.tick(Game_stage + 18)
+        if AI_MODE:
+            snk_AI.propagate_backward(snk_1.body[0], apple.pos)
 
-        except Exception as e:
-            pygame.quit()
+        clk.tick(Game_stage + 10)
 
+
+    snk_AI.save_network()
     pygame.quit()
 
 

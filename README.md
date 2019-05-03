@@ -1,4 +1,5 @@
 ## Slither game project
+*Project still in progress*
 
 #### Premise for running the game
 1. Make sure you have downloaded python 3.x version

@@ -1,5 +1,6 @@
 {
-    "scn_size": [900, 900],
-    "scn_scale": 30,
-    "scn_color": [50, 50, 50]
+    "scn_size": [1000, 1000],
+    "scn_scale": 50,
+    "scn_color": [40, 40, 40],
+    "Refresh_Rate": 80
 }

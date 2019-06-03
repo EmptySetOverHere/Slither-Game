@@ -4,6 +4,7 @@
 import json
 import pygame
 import numpy as np
+from copy import deepcopy
 
 try:
     from bin import Food, Snake
@@ -13,6 +14,7 @@ try:
         scn_size = settings['scn_size']
         scn_scale = settings['scn_scale']
         scn_background_color = settings['scn_color']
+        Refresh_Rate = settings['Refresh_Rate']
 
 except Exception as e:
     print(e)
@@ -43,16 +45,28 @@ class grid:
         self._square_color = color
         self._map = np.array([[x + xi + 1, y + yi + 1] for xi, x in enumerate(range(0, size[0], scale)) for yi, y in enumerate(range(0, size[1], scale))])
         self._size = (self._map[-1] + scale + 1).tolist()
-        self._snk_tracker = [] #snk_tracker is a list of coordinates
-
+        
         self._reshaped_map = self._map.reshape((int(ratio[0]), int(ratio[1]), 2))
         self._scale = scale + 1
         self._obstacle_stack = (self._reshaped_map[0, :] - np.array([self._scale, 0])).tolist() + (self._reshaped_map[:, 0] - np.array([0, self._scale])).tolist() + (self._reshaped_map[int(ratio[0]) - 1 , :] + np.array([self._scale, 0])).tolist() + (self._reshaped_map[:, int(ratio[1]) - 1] + np.array([0, self._scale])).tolist() 
-        self._obstacle_stack = [tuple(each) for each in self._obstacle_stack]
-        
+        self._obstacle_stack = tuple(tuple(each) for each in self._obstacle_stack)
         self._map = [tuple(each) for each in self._map.tolist()]
         
+        self._direction_dict = {"A":np.array([-self._scale, 0]), "D":np.array([self._scale, 0]), "W":np.array([0, -self._scale]), "S":np.array([0, self._scale])}
+        self._adjacent_node = dict()
         
+        for node in self._map:
+            neighbors = dict()
+            for key, value in self._direction_dict.items():
+                neighbor = tuple(node + value)
+                if neighbor in self._obstacle_stack:
+                    neighbors[key] = None
+                else:
+                    neighbors[key] = neighbor
+            self._adjacent_node[node] = neighbors
+        
+        self._snk_tracker = [] # record the previous version of snake
+                    
     #draw grid on the screen
     def draw_grid(self, screen):
         
@@ -63,44 +77,30 @@ class grid:
             pygame.draw.line(screen, (150, 150, 150), (0, y), (self._size[0], y)) 
 
 
-    def draw_snake(self, screen, snk_body, snk_head_color, snk_body_color):
+    def draw_snake(self, screen, snk_body, snk_color):
         
-        pygame.draw.rect(screen, snk_head_color, pygame.Rect(snk_body[0][0], snk_body[0][1], self._scale - 1, self._scale - 1))
-        if snk_body[0] in self._snk_tracker:
-            self._snk_tracker.remove(snk_body[0])
+        for cell in self._snk_tracker:
+            pygame.draw.rect(screen, self._square_color, pygame.Rect(cell[0], cell[1], self._scale - 1, self._scale - 1))
         
-        for b in snk_body[1:]:
-            #draw the snake body and update the map
-            pygame.draw.rect(screen, snk_body_color, pygame.Rect(b[0], b[1], self._scale - 1, self._scale - 1))
-            if b in self._snk_tracker:
-                self._snk_tracker.remove(b)
-                
-            if b in self._obstacle_stack:
-                self._obstacle_stack.remove(b)
-    
-                
-        #padding the removed square
-        if len(self._snk_tracker) >= 1:
-            pygame.draw.rect(screen, self._square_color, pygame.Rect(self._snk_tracker[0][0], self._snk_tracker[0][1], self._scale - 1, self._scale - 1))
-        
-        try:
-            self._obstacle_stack += snk_body[1:]
-            for square in self._snk_tracker:
-                self._obstacle_stack.remove(square)
-        except:
-            pass
+        for cell in snk_body:
+            pygame.draw.rect(screen, snk_color, pygame.Rect(cell[0], cell[1], self._scale - 1, self._scale - 1))
 
+                
         self._snk_tracker = snk_body[:]
+
 
     def draw_food(self, screen, food_pos, food_color):
         
         self.food_pos = food_pos
         pygame.draw.rect(screen, food_color, pygame.Rect(food_pos[0], food_pos[1], self._scale - 1, self._scale - 1))
 
-    def receive_snk(self, snk_instance):
+    def get_neighbors(self, node):
+        return deepcopy(self._adjacent_node[node])
+
+    def locate_snk(self, snk_instance):
         self._snk = snk_instance
         
-    def receive_food(self, food_instance):
+    def locate_food(self, food_instance):
         self._food = food_instance
     
     def get_map(self):
@@ -116,12 +116,19 @@ class grid:
         return self._obstacle_stack
 
     def get_snk_pos(self):
-        return self._snk.body[0][:]
+        return self._snk._body[0][:]
+    
+    def get_snk_body(self):
+        return self._snk._body[:]
     
     def get_food_pos(self):
         return self._food.pos[:]
 
-
+    def get_refresh_rate(self):
+        return Refresh_Rate
+    
+    
 if __name__ == "__main__":
+    import sys
     mp = grid()
-    print(mp.get_obstacles())
+    print(mp._adjacent_node[(52, 52)])

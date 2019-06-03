@@ -15,6 +15,9 @@ class food:
         map = map[:]
         if self.status == False:
             for b in snk_body:
-                map.remove(b)
+                try:
+                    map.remove(b)
+                except:
+                    pass
             self.pos = random.choice(map)
             self.status = True

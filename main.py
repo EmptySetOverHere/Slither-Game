@@ -14,7 +14,7 @@ except Exception as e:
     print(e)
     exit(0)
 
-AI_MODE = True
+AI_MODE = True 
 
 class SnakeGame:
 
@@ -22,16 +22,35 @@ class SnakeGame:
         
         self.ai_path = None
         self.grd = Grid.grid()
-        self.snk = Snake.snake(self.grd.get_map(), self.grd.get_scale())
+        self.snk = Snake.snake(self.grd)
         self.apple = Food.food(self.grd.get_map())
         
-        self.grd.receive_food(self.apple)
-        self.grd.receive_snk(self.snk)
+        self.grd.locate_food(self.apple)
+        self.grd.locate_snk(self.snk)
         
         if AI_MODE:
             self.aiInstance = AI.brutal_ai(self.grd)
         else:
             self.aiInstance = None
+            
+            
+    def pause(self):
+        
+        start = True
+        while start:
+            try:
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        pygame.quit()
+                        
+                    elif event.type == pygame.KEYDOWN:
+                        if chr(event.key) == 'p':
+                            start = False            
+                if pygame.mouse.get_pressed()[0]:
+                    print(f'Mouse Position: {pygame.mouse.get_pos()}')
+            except:
+                pass
+        
 
     def run(self):
 
@@ -43,37 +62,45 @@ class SnakeGame:
         
         while True:
 
-            if self.aiInstance is None:
-                for event in pygame.event.get():
-                    if event.type == pygame.QUIT:
-                        pygame.quit()
-                    elif event.type == pygame.KEYDOWN:
+            for event in pygame.event.get():
+                
+                if event.type == pygame.KEYDOWN:
+                    
+                    if chr(event.key) == 'p':
+                        self.pause()
+                    
+                    if self.aiInstance is None:
+                    
                         key_input = chr(event.key).capitalize()
                         self.snk.receive_signal(key_input)
                         
-            elif self.ai_path:
+            if self.ai_path and self.aiInstance:
                 
-                self.snk.receive_signal(self.ai_path[-1])
-                self.ai_path.pop()
+                self.snk.receive_signal(self.ai_path.pop())
                 
-            else:
+            elif self.aiInstance:
+                
                 self.ai_path = self.aiInstance.get_path()
+                if self.ai_path:
+                    self.snk.receive_signal(self.ai_path.pop())
+                else:
+                    break
                 
                 
             self.snk.move()
             self.snk.feed(self.apple)
-            self.apple.regenerate(self.grd.get_map(), self.snk.body)
+            self.apple.regenerate(self.grd.get_map(), self.snk.get_body())
 
-            Game_Status = self.snk.check_status(self.grd.get_obstacles())
+            Game_Status = self.snk.check_status()
             if Game_Status is True:
-                self.grd.draw_snake(scn, self.snk.body, self.snk.head_color, self.snk.body_color)
+                self.grd.draw_snake(scn, self.snk.get_body(), self.snk.get_color())
                 self.grd.draw_food(scn, self.apple.pos, self.apple.color)
                 pygame.display.update()
             else:
                 print("Game Over")
                 break
 
-            clk.tick(15)
+            clk.tick(self.grd.get_refresh_rate())
                 
 
         pygame.quit()
